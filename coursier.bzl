@@ -107,6 +107,7 @@ def _generate_java_jar_command(repository_ctx, jar_path):
     else:
         # Try to execute coursier directly
         cmd = [jar_path] + coursier_opts + ["-J%s" % arg for arg in _get_java_proxy_args(repository_ctx)]
+    print("Basic coursier command: %s" % cmd)
 
     return cmd
 
@@ -492,6 +493,7 @@ def make_coursier_dep_tree(
         timeout,
         report_progress_prefix="",
 ):
+    print("Successfully run coursier once")
     # Set up artifact exclusion, if any. From coursier fetch --help:
     #
     # Path to the local exclusion file. Syntax: <org:name>--<org:name>. `--` means minus. Example file content:
@@ -539,6 +541,8 @@ def make_coursier_dep_tree(
     if fetch_sources:
         cmd.append("--sources")
         cmd.append("--default=true")
+
+    print("Final coursier command: %s" % cmd)
 
     environment = {}
     coursier_cache_location = get_coursier_cache_or_default(
