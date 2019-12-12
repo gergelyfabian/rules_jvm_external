@@ -482,7 +482,7 @@ def _coursier_fetch_impl(repository_ctx):
             cmd.extend(["--force-version", coord.split(",classifier=")[0]])
     cmd.extend(["--artifact-type", ",".join(SUPPORTED_PACKAGING_TYPES + ["src"])])
     #cmd.append("--quiet")
-    cmd.append("--progress")
+    #cmd.append("--progress")
     cmd.append("--no-default")
     cmd.extend(["--json-output-file", "dep-tree.json"])
 
@@ -514,7 +514,7 @@ def _coursier_fetch_impl(repository_ctx):
     print("Final coursier command: %s" % cmd)
 
     repository_ctx.report_progress("Resolving and fetching the transitive closure of %s artifact(s).." % len(artifact_coordinates))
-    exec_result = repository_ctx.execute(cmd, timeout = repository_ctx.attr.resolve_timeout)
+    exec_result = repository_ctx.execute(cmd, timeout = repository_ctx.attr.resolve_timeout, quiet = False)
     if (exec_result.return_code != 0):
         fail("Error while fetching artifact with coursier: " + exec_result.stderr)
 
