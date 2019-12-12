@@ -87,6 +87,7 @@ def _generate_coursier_command(repository_ctx):
     else:
         # Try to execute coursier directly
         cmd = [coursier] + ["-J%s" % arg for arg in _get_java_proxy_args(repository_ctx)]
+    print("Basic coursier command: %s" % cmd)
 
     return cmd
 
@@ -288,6 +289,7 @@ def _coursier_fetch_impl(repository_ctx):
     exec_result = repository_ctx.execute(_generate_coursier_command(repository_ctx))
     if exec_result.return_code != 0:
         fail("Unable to run coursier: " + exec_result.stderr)
+    print("Successfully run coursier once")
 
     _windows_check(repository_ctx)
 
@@ -329,7 +331,8 @@ def _coursier_fetch_impl(repository_ctx):
             # Undo any `,classifier=` suffix from `utils.artifact_coordinate`.
             cmd.extend(["--force-version", coord.split(",classifier=")[0]])
     cmd.extend(["--artifact-type", ",".join(SUPPORTED_PACKAGING_TYPES + ["src"])])
-    cmd.append("--quiet")
+    #cmd.append("--quiet")
+    cmd.append("--progress")
     cmd.append("--no-default")
     cmd.extend(["--json-output-file", "dep-tree.json"])
 
@@ -357,6 +360,8 @@ def _coursier_fetch_impl(repository_ctx):
         # cache's .structure.lock file while running in parallel. This does not
         # happen on *nix.
         cmd.extend(["--parallel", "1"])
+
+    print("Final coursier command: %s" % cmd)
 
     repository_ctx.report_progress("Resolving and fetching the transitive closure of %s artifact(s).." % len(artifact_coordinates))
     exec_result = repository_ctx.execute(cmd, timeout = repository_ctx.attr.resolve_timeout)
