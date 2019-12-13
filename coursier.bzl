@@ -69,6 +69,41 @@ def _relativize_and_symlink_file(repository_ctx, absolute_path):
         repository_ctx.symlink(absolute_path, repository_ctx.path(artifact_relative_path))
     return artifact_relative_path
 
+# Relativize an absolute path to an artifact in coursier's default cache location.
+# After relativizing, copy the file into the workspace's output base.
+# Then return the relative path for further processing
+def _relativize_and_copy_file(repository_ctx, absolute_path):
+    # The path manipulation from here on out assumes *nix paths, not Windows.
+    # for artifact_absolute_path in artifact_absolute_paths:
+    #
+    # Also replace '\' with '/` to normalize windows paths to *nix style paths
+    # BUILD files accept only *nix paths, so we normalize them here.
+    #
+    # We assume that coursier uses the default cache location
+    # TODO(jin): allow custom cache locations
+
+    absolute_path_parts = absolute_path.split("v1/")
+    if len(absolute_path_parts) != 2:
+        fail("Error while trying to parse the path of file in the coursier cache: " + absolute_path)
+    else:
+        # Copy the file from the absolute path of the artifact to the relative
+        # path within the output_base/external.
+        artifact_relative_path = "v1/" + absolute_path_parts[1]
+        bazel_cache_path = repository_ctx.path(artifact_relative_path)
+
+        parent_dir = bazel_cache_path.dirname
+
+        cmd = ["mkdir", "-p", parent_dir]
+        exec_result = repository_ctx.execute(cmd)
+        if exec_result.return_code != 0:
+            fail("Failed executing command %s: %s" % (cmd, exec_result.stderr))
+
+        cmd = ["cp", absolute_path, bazel_cache_path]
+        exec_result = repository_ctx.execute(cmd)
+        if exec_result.return_code != 0:
+            fail("Failed executing command %s: %s" % (cmd, exec_result.stderr))
+    return artifact_relative_path
+
 # Generate the base `coursier` command depending on the OS, JAVA_HOME or the
 # location of `java`.
 def _generate_coursier_command(repository_ctx):
@@ -347,7 +382,7 @@ def _coursier_fetch_impl(repository_ctx):
             cmd.extend(["--credentials", utils.repo_credentials(repository)])
     for a in excluded_artifacts:
         cmd.extend(["--exclude", ":".join([a["group"], a["artifact"]])])
-    if not repository_ctx.attr.use_unsafe_shared_cache:
+    if not (repository_ctx.attr.use_unsafe_shared_cache or repository_ctx.attr.use_safe_shared_cache):
         cmd.extend(["--cache", "v1"])  # Download into $output_base/external/$maven_repo_name/v1
     if repository_ctx.attr.fetch_sources:
         cmd.append("--sources")
@@ -383,22 +418,26 @@ def _coursier_fetch_impl(repository_ctx):
         if repository_ctx.attr.use_unsafe_shared_cache:
             artifact.update({"file": _relativize_and_symlink_file(repository_ctx, artifact["file"])})
 
+        if repository_ctx.attr.use_safe_shared_cache:
+            artifact.update({"file": _relativize_and_copy_file(repository_ctx, artifact["file"])})
+
         # Coursier saves the artifacts into a subdirectory structure
         # that mirrors the URL where the artifact's fetched from. Using
         # this, we can reconstruct the original URL.
         primary_url_parts = []
         filepath_parts = artifact["file"].split("/")
         protocol = None
+
         # Only support http/https transports
         for part in filepath_parts:
             if part == "http" or part == "https":
-                    protocol = part
+                protocol = part
         if protocol == None:
             fail("Only artifacts downloaded over http(s) are supported: %s" % artifact["coord"])
         primary_url_parts.extend([protocol, "://"])
         for part in filepath_parts[filepath_parts.index(protocol) + 1:]:
             primary_url_parts.extend([part, "/"])
-        primary_url_parts.pop() # pop the final "/"
+        primary_url_parts.pop()  # pop the final "/"
 
         # Coursier encodes:
         # - ':' as '%3A'
@@ -464,8 +503,8 @@ def _coursier_fetch_impl(repository_ctx):
         ])
 
         if exec_result.return_code != 0:
-            fail("Error while obtaining the sha256 checksum of "
-                    + artifact["file"] + ": " + exec_result.stderr)
+            fail("Error while obtaining the sha256 checksum of " +
+                 artifact["file"] + ": " + exec_result.stderr)
 
         # Update the SHA-256 checksum in-place.
         artifact.update({"sha256": repository_ctx.read("artifact.sha256")})
@@ -628,6 +667,7 @@ coursier_fetch = repository_rule(
         "fail_on_missing_checksum": attr.bool(default = True),
         "fetch_sources": attr.bool(default = False),
         "use_unsafe_shared_cache": attr.bool(default = False),
+        "use_safe_shared_cache": attr.bool(default = False),
         "excluded_artifacts": attr.string_list(default = []),  # list of artifacts to exclude
         "generate_compat_repositories": attr.bool(default = False),  # generate a compatible layer with repositories for each artifact
         "version_conflict_policy": attr.string(
