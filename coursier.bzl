@@ -198,6 +198,7 @@ def _pinned_coursier_fetch_impl(repository_ctx):
         "load(\"@bazel_tools//tools/build_defs/repo:http.bzl\", \"http_file\")",
         "def pinned_maven_install():",
     ]
+
     for artifact in dep_tree["dependencies"]:
         if artifact.get("url") != None:
             http_file_repository_name = escape(artifact["coord"])
@@ -272,6 +273,15 @@ def _pinned_coursier_fetch_impl(repository_ctx):
                 "\n".join(compat_repositories_bzl) + "\n",
                 False,  # not executable
             )
+
+def _deduplicate_artifacts(dep_tree):
+    deduped_artifacts = {}
+    for artifact in dep_tree["dependencies"]:
+        if artifact["coord"] in deduped_artifacts:
+            continue
+        deduped_artifacts[artifact["coord"]] = artifact
+    dep_tree.update({"dependencies": deduped_artifacts.values()})
+    return dep_tree
 
 def _coursier_fetch_impl(repository_ctx):
     # Not using maven_install.json, so we resolve and fetch from scratch.
@@ -366,7 +376,10 @@ def _coursier_fetch_impl(repository_ctx):
     # Once coursier finishes a fetch, it generates a tree of artifacts and their
     # transitive dependencies in a JSON file. We use that as the source of truth
     # to generate the repository's BUILD file.
-    dep_tree = json_parse(repository_ctx.read(repository_ctx.path("dep-tree.json")))
+    #
+    # Coursier generates duplicate artifacts sometimes. Deduplicate them using
+    # the coordinate value as the key.
+    dep_tree = _deduplicate_artifacts(json_parse(repository_ctx.read(repository_ctx.path("dep-tree.json"))))
 
     # Reconstruct the original URLs from the relative path to the artifact,
     # which encodes the URL components for the protocol, domain, and path to
