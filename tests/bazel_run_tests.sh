@@ -189,7 +189,7 @@ function test_found_artifact_with_plus_through_pin_and_build() {
 
   force_bzlmod_lock_file_to_be_regenerated
 
-  bazel build @artifact_with_plus//:ch_epfl_scala_compiler_interface >> "$TEST_LOG" 2>&1
+  bazel build @artifact_with_plus//... >> "$TEST_LOG" 2>&1
   rm -f *artifact_with_plus_install.json
 
   expect_log "Successfully pinned resolved artifacts"
@@ -203,7 +203,7 @@ function test_unpinned_found_artifact_with_plus_through_pin_and_build() {
 
   force_bzlmod_lock_file_to_be_regenerated
 
-  bazel build @artifact_with_plus_repin//:ch_epfl_scala_compiler_interface >> "$TEST_LOG" 2>&1
+  bazel build @artifact_with_plus_repin//... >> "$TEST_LOG" 2>&1
 
   expect_log "Successfully pinned resolved artifacts"
 }

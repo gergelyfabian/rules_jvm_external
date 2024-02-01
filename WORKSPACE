@@ -596,8 +596,10 @@ maven_install(
     name = "artifact_with_plus",
     artifacts = [
         "ch.epfl.scala:compiler-interface:1.3.0-M4+47-d881fa2f",
+        "dev.zio:zio_2.12:2.1-RC1+39-8f391f96-SNAPSHOT",
     ],
     repositories = [
+        "m2Local",
         "https://repo1.maven.org/maven2",
     ],
 )
@@ -606,9 +608,11 @@ maven_install(
     name = "artifact_with_plus_repin",
     artifacts = [
         "ch.epfl.scala:compiler-interface:1.3.0-M4+47-d881fa2f",
+        "dev.zio:zio_2.12:2.1-RC1+39-8f391f96-SNAPSHOT",
     ],
     maven_install_json = "//tests/custom_maven_install:artifact_with_plus_repin_install.json",
     repositories = [
+        "m2Local",
         "https://repo1.maven.org/maven2",
     ],
 )
