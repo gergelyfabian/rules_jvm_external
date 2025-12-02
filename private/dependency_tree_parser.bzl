@@ -29,6 +29,7 @@ load(
     "strip_packaging_and_classifier_and_version",
     "to_repository_name",
 )
+load("@rules_java//java:defs.bzl", "java_import", "java_library", "java_plugin")
 load("//private/lib:coordinates.bzl", "to_purl", "unpack_coordinates")
 load("//private/lib:urls.bzl", "scheme_and_host")
 

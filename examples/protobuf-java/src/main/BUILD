@@ -1,3 +1,4 @@
+load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_proto//proto:defs.bzl", "proto_library")
 
 java_binary(

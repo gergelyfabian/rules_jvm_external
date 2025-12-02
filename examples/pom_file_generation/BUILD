@@ -1,3 +1,4 @@
+load("@rules_java//java:defs.bzl", "java_library")
 load("@bazel_common//tools/maven:pom_file.bzl", "pom_file")
 
 java_library(
